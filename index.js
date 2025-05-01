@@ -953,6 +953,7 @@ async function updateBackupsList() {
                         <div class="backup_preview" title="${backup.lastMessagePreview}">${backup.lastMessagePreview}...</div>
                     </div>
                     <div class="backup_actions">
+                        <button class="menu_button backup_preview_btn" title="预览此备份内容" data-timestamp="${backup.timestamp}" data-key="${backup.chatKey}">预览</button>
                         <button class="menu_button backup_restore" title="恢复此备份到新聊天" data-timestamp="${backup.timestamp}" data-key="${backup.chatKey}">恢复</button>
                         <button class="menu_button danger_button backup_delete" title="删除此备份" data-timestamp="${backup.timestamp}" data-key="${backup.chatKey}">删除</button>
                     </div>
@@ -967,6 +968,91 @@ async function updateBackupsList() {
         backupsContainer.html(`<div class="backup_empty_notice">加载备份列表失败: ${error.message}</div>`);
     }
 }
+
+// 创建预览弹窗
+function createPreviewModal(title, messages) {
+    // 创建弹窗元素
+    const modal = $('<div class="backup_preview_modal"></div>');
+    const content = $('<div class="backup_preview_content"></div>');
+    const header = $(`
+        <div class="backup_preview_header">
+            <h3>${title}</h3>
+            <span class="backup_preview_close">&times;</span>
+        </div>
+    `);
+    const body = $('<div class="backup_preview_body"></div>');
+    
+    // 添加消息内容
+    messages.forEach(msg => {
+        // 过滤掉<think>和<thinking>标签内容
+        let messageContent = msg.mes || '';
+        messageContent = messageContent.replace(/<think>[\s\S]*?<\/think>/gi, '');
+        messageContent = messageContent.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
+        
+        const messageElement = $(`
+            <div class="backup_message ${msg.is_user ? 'user' : 'assistant'}">
+                <div class="backup_message_name">${msg.name || (msg.is_user ? '用户' : '助手')}</div>
+                <div class="backup_message_content">${messageContent}</div>
+            </div>
+        `);
+        body.append(messageElement);
+    });
+    
+    // 组装弹窗
+    content.append(header).append(body);
+    modal.append(content);
+    
+    // 添加关闭事件
+    modal.on('click', function(e) {
+        if ($(e.target).is('.backup_preview_modal, .backup_preview_close')) {
+            modal.remove();
+        }
+    });
+    
+    return modal;
+}
+
+// 预览备份内容
+async function previewBackup(chatKey, timestamp) {
+    try {
+        logDebug(`预览备份, chatKey: ${chatKey}, timestamp: ${timestamp}`);
+        const db = await getDB();
+        
+        // 获取备份数据
+        const backup = await new Promise((resolve, reject) => {
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            transaction.onerror = (event) => reject(event.target.error);
+            
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get([chatKey, timestamp]);
+            
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (event) => reject(event.target.error);
+        });
+        
+        if (!backup || !backup.chat || !Array.isArray(backup.chat)) {
+            toastr.error('无法加载备份内容或备份格式无效');
+            return;
+        }
+        
+        // 创建并显示预览弹窗
+        const title = `${backup.entityName} - ${backup.chatName}`;
+        const modal = createPreviewModal(title, backup.chat);
+        $('body').append(modal);
+        
+    } catch (error) {
+        console.error('[聊天自动备份] 预览备份失败:', error);
+        toastr.error(`预览失败: ${error.message}`);
+    }
+}
+
+// 在事件绑定部分添加预览按钮的点击事件处理
+$(document).on('click', '.backup_preview_btn', function() {
+    const button = $(this);
+    const timestamp = parseInt(button.data('timestamp'));
+    const chatKey = button.data('key');
+    previewBackup(chatKey, timestamp);
+});
 
 // --- 初始化与事件绑定 ---
 jQuery(async () => {
