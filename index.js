@@ -984,7 +984,7 @@ function createPreviewModal(title, messages) {
     
     // 添加提示信息
     const totalMessages = messages.length;
-    body.append(`<div class="backup_preview_info">共 ${totalMessages} 条消息，仅显示最后 2 条</div>`);
+    body.append(`<div class="backup_preview_info">仅显示最后 2 条</div>`);
     
     // 只获取最后两条消息
     const lastMessages = messages.slice(-2);
