@@ -969,69 +969,61 @@ async function updateBackupsList() {
     }
 }
 
-// 创建预览弹窗
 function createPreviewModal(title, messages) {
-    // 创建弹窗元素
-    const modal = $('<div class="backup_preview_modal"></div>');
-    const content = $('<div class="backup_preview_content"></div>');
-    const header = $(`
-        <div class="backup_preview_header">
-            <h3>${title}</h3>
-            <span class="backup_preview_close">&times;</span>
-        </div>
-    `);
-    const body = $('<div class="backup_preview_body"></div>');
-    
-    // 添加提示信息
-    const totalMessages = messages.length;
-    body.append(`<div class="backup_preview_info">共 ${totalMessages} 条消息，仅显示最后 2 条</div>`);
-    
-    // 只获取最后两条消息
-    const lastMessages = messages.slice(-2);
-    
-    // 如果消息数大于2，添加分隔线指示前面还有消息
-    if (totalMessages > 2) {
-        body.append('<div class="backup_message_divider"></div>');
-    }
-    
-    // 添加最后两条消息内容
-    lastMessages.forEach(msg => {
-        // 过滤掉<think>和<thinking>标签内容
-        let messageContent = msg.mes || '';
-        messageContent = messageContent.replace(/<think>[\s\S]*?<\/think>/gi, '');
-        messageContent = messageContent.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
-        
-        const messageElement = $(`
-            <div class="backup_message ${msg.is_user ? 'user' : 'assistant'}">
-                <div class="backup_message_name">${msg.name || (msg.is_user ? '用户' : '助手')}</div>
-                <div class="backup_message_content">${messageContent}</div>
+    // 创建一个完全独立的模态框，附加到body而不是插件内部
+    const modalHtml = `
+        <div id="backup_preview_modal" class="backup_preview_modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.85); z-index:9999; display:flex; justify-content:center; align-items:center;">
+            <div class="backup_preview_content" style="background-color:#121212; border:1px solid #444; border-radius:10px; width:80%; max-width:800px; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 5px 15px rgba(0,0,0,0.8); position:relative; overflow:hidden;">
+                <div class="backup_preview_header" style="display:flex; justify-content:space-between; align-items:center; padding:10px 15px; border-bottom:1px solid #444; background-color:#000000;">
+                    <h3 style="margin:0; color:#fff;">${title}</h3>
+                    <span id="backup_preview_close" style="cursor:pointer; font-size:1.5em; color:#fff;">&times;</span>
+                </div>
+                <div class="backup_preview_body" style="padding:15px; overflow-y:auto; max-height:calc(80vh - 50px); color:#ddd;">
+                    <div class="backup_preview_info" style="text-align:center; color:rgba(255,255,255,0.6); margin-bottom:15px; font-style:italic;">
+                        共 ${messages.length} 条消息，仅显示最后 2 条
+                    </div>
+                    ${messages.length > 2 ? '<div style="margin:20px 0; height:2px; background-color:rgba(255,255,255,0.2); position:relative;"><div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); background-color:#121212; padding:0 10px; color:rgba(255,255,255,0.6);">...</div></div>' : ''}
+                    ${messages.slice(-2).map(msg => {
+                        let messageContent = msg.mes || '';
+                        messageContent = messageContent.replace(/<think>[\s\S]*?<\/think>/gi, '');
+                        messageContent = messageContent.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
+                        
+                        return `
+                            <div style="margin-bottom:15px; padding:10px; border-radius:8px; background-color:${msg.is_user ? 'rgba(0,120,255,0.15)' : 'rgba(128,0,128,0.15)'}; color:rgba(255,255,255,0.9);">
+                                <div style="font-weight:bold; margin-bottom:5px;">${msg.name || (msg.is_user ? '用户' : '助手')}</div>
+                                <div style="white-space:pre-wrap;">${messageContent}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
             </div>
-        `);
-        body.append(messageElement);
-    });
+        </div>
+    `;
     
-    // 组装弹窗
-    content.append(header).append(body);
-    modal.append(content);
+    // 删除任何已存在的预览模态框
+    $('#backup_preview_modal').remove();
     
-    // 改进的关闭事件处理
-    modal.on('click', function(e) {
-        // 仅当点击模态框背景时才关闭
-        if ($(e.target).is('.backup_preview_modal')) {
-            e.stopPropagation(); // 阻止事件传播
-            modal.remove();
-        }
-    });
+    // 将新模态框直接添加到 body
+    $('body').append(modalHtml);
     
-    // 为关闭按钮单独添加事件处理
-    header.find('.backup_preview_close').on('click', function(e) {
-        e.stopPropagation(); // 阻止事件传播
+    // 使用原生JavaScript绑定事件，避免jQuery事件委托可能的问题
+    const modal = document.getElementById('backup_preview_modal');
+    const closeBtn = document.getElementById('backup_preview_close');
+    
+    // 关闭按钮事件
+    closeBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         modal.remove();
     });
     
-    // 阻止内容区域的点击事件冒泡到背景
-    content.on('click', function(e) {
-        e.stopPropagation();
+    // 点击背景关闭
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            e.preventDefault();
+            e.stopPropagation();
+            modal.remove();
+        }
     });
     
     return modal;
