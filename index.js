@@ -969,7 +969,7 @@ async function updateBackupsList() {
     }
 }
 
-// 更新createPreviewModal函数，只显示最后两条消息
+// 创建预览弹窗
 function createPreviewModal(title, messages) {
     // 创建弹窗元素
     const modal = $('<div class="backup_preview_modal"></div>');
@@ -984,7 +984,7 @@ function createPreviewModal(title, messages) {
     
     // 添加提示信息
     const totalMessages = messages.length;
-    body.append(`<div class="backup_preview_info">仅显示最后 2 条</div>`);
+    body.append(`<div class="backup_preview_info">共 ${totalMessages} 条消息，仅显示最后 2 条</div>`);
     
     // 只获取最后两条消息
     const lastMessages = messages.slice(-2);
@@ -1014,11 +1014,24 @@ function createPreviewModal(title, messages) {
     content.append(header).append(body);
     modal.append(content);
     
-    // 添加关闭事件
+    // 改进的关闭事件处理
     modal.on('click', function(e) {
-        if ($(e.target).is('.backup_preview_modal, .backup_preview_close')) {
+        // 仅当点击模态框背景时才关闭
+        if ($(e.target).is('.backup_preview_modal')) {
+            e.stopPropagation(); // 阻止事件传播
             modal.remove();
         }
+    });
+    
+    // 为关闭按钮单独添加事件处理
+    header.find('.backup_preview_close').on('click', function(e) {
+        e.stopPropagation(); // 阻止事件传播
+        modal.remove();
+    });
+    
+    // 阻止内容区域的点击事件冒泡到背景
+    content.on('click', function(e) {
+        e.stopPropagation();
     });
     
     return modal;
