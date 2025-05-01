@@ -969,7 +969,7 @@ async function updateBackupsList() {
     }
 }
 
-// 创建预览弹窗
+// 更新createPreviewModal函数，只显示最后两条消息
 function createPreviewModal(title, messages) {
     // 创建弹窗元素
     const modal = $('<div class="backup_preview_modal"></div>');
@@ -982,8 +982,20 @@ function createPreviewModal(title, messages) {
     `);
     const body = $('<div class="backup_preview_body"></div>');
     
-    // 添加消息内容
-    messages.forEach(msg => {
+    // 添加提示信息
+    const totalMessages = messages.length;
+    body.append(`<div class="backup_preview_info">共 ${totalMessages} 条消息，仅显示最后 2 条</div>`);
+    
+    // 只获取最后两条消息
+    const lastMessages = messages.slice(-2);
+    
+    // 如果消息数大于2，添加分隔线指示前面还有消息
+    if (totalMessages > 2) {
+        body.append('<div class="backup_message_divider"></div>');
+    }
+    
+    // 添加最后两条消息内容
+    lastMessages.forEach(msg => {
         // 过滤掉<think>和<thinking>标签内容
         let messageContent = msg.mes || '';
         messageContent = messageContent.replace(/<think>[\s\S]*?<\/think>/gi, '');
