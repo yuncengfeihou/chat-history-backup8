@@ -947,7 +947,7 @@ async function updateBackupsList() {
                             <span class="backup_chat" title="${backup.chatName}">${backup.chatName || '未知聊天'}</span>
                         </div>
                          <div class="backup_details">
-                            <span class="backup_mesid">消息数: ${backup.lastMessageId + 1}</span>
+                            <span class="backup_mesid">最新楼: #${backup.lastMessageId}</span>
                             <span class="backup_date">${formattedDate}</span>
                         </div>
                         <div class="backup_preview" title="${backup.lastMessagePreview}">${backup.lastMessagePreview}...</div>
